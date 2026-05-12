@@ -14,7 +14,15 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-SYSTEM_PROMPT = """أنت مساعد ذكي لقسم تكنولوجيا المعلومات (IT). أجب بالعربية الفصحى."""
+SYSTEM_PROMPT = """أنت مساعد ذكي لقسم تكنولوجيا المعلومات (IT) في الجامعة.
+
+معلومات القسم:
+- السنة الثالثة IT: قواعد البيانات، شبكات الحاسوب، البرمجة المتقدمة، أمن المعلومات
+- د. أحمد: قواعد البيانات | د. سارة: الشبكات | د. محمد: البرمجة
+- ساعات المكتب: الأحد والثلاثاء 10:00 - 12:00
+- الموقع: المبنى الرئيسي، الطابق الثالث
+
+أجب بالعربية الفصحى بأسلوب ودي ومفيد. إذا لم تكن متأكداً، وجه الطالب للتواصل مع المشرف."""
 
 def send_telegram_message(chat_id: int, text: str):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -48,7 +56,7 @@ def get_ai_response(user_message: str) -> str:
         return result['candidates'][0]['content']['parts'][0]['text']
     except Exception as e:
         logger.error(f"AI error: {e}")
-        return "عذراً، المساعد الذكي غير متوفر حالياً."
+        return "عذراً، المساعد الذكي غير متوفر حالياً. تواصل مع المشرف."
 
 @app.post("/webhook")
 async def webhook(request: Request, background_tasks: BackgroundTasks):
@@ -62,8 +70,18 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
     return {"status": "processing"}
 
 def process_message(chat_id: int, text: str):
+    logger.info(f"User {chat_id}: {text}")
     if text == "/start":
-        welcome = "🎓 مرحباً بك في بوت قسم IT!\n\nاكتب سؤالك وسأجيب عليه بالذكاء الاصطناعي."
+        welcome = """🎓 مرحباً بك في بوت قسم IT!
+
+أنا مساعدك الذكي للإجابة على استفساراتك الأكاديمية.
+
+<b>اكتب سؤالك مباشرة</b> وسأجيب عليه بالذكاء الاصطناعي.
+
+<b>أمثلة:</b>
+• ما هي مواد السنة الثالثة؟
+• متى ساعات مكتب د. أحمد؟
+• شرح Normalization في قواعد البيانات"""
         send_telegram_message(chat_id, welcome)
         return
     ai_response = get_ai_response(text)
